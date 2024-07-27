@@ -61,28 +61,21 @@ This is the first component to my project of bringing modern webapp infrastructu
 
    ```js 
    
-   const ENDPOINTS = {
-     'echo': Endpoints.echo,
-     'dummyHGW': Endpoints.dummyHGW,
+   /** 
+    * @param {NS} ns 
+    * @param {Object} data object with 'ram' and 'cores' keys
+    * */
+   export default async function (ns, data) {
+   	const ram = data.ram;
+   	const cores = data.cores;
+   
+   	const h = 1;
+   	const g = 1;
+   	const w = 1;
+   	return [STATUS_OK, { h, g, w }];
    }
    
-   class Endpoints {
-   	// Testing endpoint, for ensuring clients can communicate back and forth
-   	static echo(data) {
-   		return [STATUS.OK, data];
-   	}
-   
-   	// @TODO implement this
-   	static dummyHGW(data) {
-   		const ram = data.ram;
-   		const cores = data.cores;
-   
-   		const h = 1;
-   		const g = 1;
-   		const w = 1;
-   		return [STATUS.OK, { h, g, w }];
-   	}
-   }
+   const STATUS_OK = 200;
    ```
 
    

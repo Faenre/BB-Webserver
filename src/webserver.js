@@ -1,3 +1,5 @@
+import * as ENDPOINTS from 'endpoints/index';
+
 /*
   Listens on port 1001 for web requests and performs them. 
   Responds on port 1002.
@@ -26,11 +28,6 @@
 const LISTEN_PORT = 1001;
 const RESPONSE_PORT = 1002;
 
-const ENDPOINTS = {
-  'echo': Endpoints.echo,
-  'dummyHGW': Endpoints.dummyHGW,
-}
-
 const STATUS = {
   // Informational:
   'PROCESSING': 102,          // the message was received and is being processed, but this may take time
@@ -58,13 +55,13 @@ export async function main(ns) {
   ns.tail();
 
   const server = new Server(ns);
-  server.listen();
+  await server.listen();
 }
 
 class Server {
   constructor(ns) {
     this.ns = ns;
-    this.listenPort = this.ns.getPortHandle(READ_PORT);
+    this.listenPort = this.ns.getPortHandle(LISTEN_PORT);
     this.responsePort = this.ns.getPortHandle(RESPONSE_PORT);
   }
 
@@ -95,8 +92,8 @@ class Server {
       // Send a reply (unless the client indicated not to, or there is no return address)
       if (request.noreply) continue;
       if (!request.origin) continue;
-      this.responsePort.write(response);
-      this.ns.print(`SUCCESS response sent to ${response.to}`)
+      this.responsePort.write(JSON.stringify(response));
+      this.ns.print(`SUCCESS response sent to ${response.to}`);
     }
   }
 
@@ -120,12 +117,12 @@ class Server {
       const responseData = controller(data);
       if (!responseData)
         return [STATUS.BAD_INPUT, {}];
+
+      return [STATUS.OK, responseData];
     } catch (err) {
       this.ns.print('ERROR server can not handle request:\n' + err.stack);
       return [STATUS.SERVER_ERROR, {}];
     }
-
-    return [STATUS.OK, responseData];
   }
 }
 
@@ -161,7 +158,7 @@ class ApiResponse {
     this.callback = callback;
   }
 
-  hasDestination = () => (!!this.to);
+  hasDestination = () => (this.to != undefined);
 
   toJson() {
     return {
@@ -170,23 +167,5 @@ class ApiResponse {
       'data': this.data,
       'callback': this.callback,
     }
-  }
-}
-
-class Endpoints {
-  // Testing endpoint, for ensuring clients can communicate back and forth
-  static echo(data) {
-    return [STATUS.OK, data];
-  }
-
-  // @TODO implement this
-  static dummyHGW(data) {
-    const ram = data.ram;
-    const cores = data.cores;
-
-    const h = 1;
-    const g = 1;
-    const w = 1;
-    return [STATUS.OK, { h, g, w }];
   }
 }
