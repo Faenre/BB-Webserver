@@ -1,25 +1,7 @@
-import { NS } from '@/NetscriptDefinitions.js';
-import * as ENDPOINTS from './endpoints/index.js';
-import { Status, StatusCode, StatusCodes } from './StatusCodes.js';
-
-const DEFAULT_LISTEN_PORT = 1001;
-const DEFAULT_RESPONSE_PORT = 1002;
-
-export interface PortRequest {
-	endpoint: string;
-	origin: string;
-	callback: string | number | null;
-	data: object;
-	noreply: boolean;
-	error: string | null;
-}
-
-export interface PortResponse {
-	to: string;
-	status: StatusCode;
-	data: object;
-	callback: string | number | null;
-}
+import { NS } from '@/NetscriptDefinitions';
+import * as ENDPOINTS from './endpoints/index';
+import { Status, StatusCodes } from './StatusCodes';
+import { PortRequest, PortResponse, DEFAULT_LISTEN_PORT, DEFAULT_RESPONSE_PORT } from './API';
 
 export class Server {
 	ns: NS;
@@ -56,32 +38,51 @@ export class Server {
 
 			// Parse the request
 			const content = listenPort.read();
-			const request = this.parseContent(content);
-			if (request.error) {
-				this.ns.print(`WARNING skipping invalid request: ${request.error}`);
+			const [request, error] = this.parseContent(content);
+			if (error) {
+				this.ns.print(`WARNING skipping invalid request: ${error}`);
 				continue;
 			}
 
 			// Process the request
-			this.ns.print(`INFO Now handling request from ${request.origin}.`);
+			this.ns.print(`INFO Now handling request for callback ${request.callback}.`);
 			const response = this.handle(request);
 
 			// Send a reply (unless indicated not to)
-			if (request.noreply) continue;
-			if (!request.origin) continue;
+			if (!request.callback) continue;
 			responsePort.write(JSON.stringify(response));
-			this.ns.print(`SUCCESS response sent to ${response.to}`);
+			this.ns.print(`${response.status.code < 400 ? 'SUCCESS' : 'WARNING'} response sent to ${response.callback}`);
 		}
 	}
+
+  parseContent(content: string): [PortRequest, string | null] {
+    try {
+      const json = JSON.parse(content);
+      return [{
+        endpoint: json['endpoint'],
+        callback: json['callback'],
+        data: 		json['data'],
+      }, null]
+    } catch (err) {
+      const error = `\
+      Cannot parse message content. Perhaps the JSON is malformed?
+
+      Message content:
+      ${content}
+
+      Stack:
+      ${err.stack}`;
+      return [{ endpoint: '', callback: null, data: {} }, error]
+    }
+  }
 
 	handle(request: PortRequest): PortResponse {
 		const [status, data] = this.doHandle(request.endpoint, request.data);
 
 		return {
-			to: request.origin,
+      callback: request.callback,
 			status: StatusCodes[status],
 			data: data,
-			callback: request.callback,
 		}
 	}
 
@@ -99,32 +100,4 @@ export class Server {
 			return [Status.SERVER_ERROR, {}];
 		}
 	}
-
-  parseContent(content: string): PortRequest {
-    try {
-      const json = JSON.parse(content);
-      return {
-        endpoint: json['endpoint'],
-        origin: 	json['from'],
-        callback: json['callback'],
-        data: 		json['data'],
-        noreply: 	json['noreply'],
-        error: 		null,
-      }
-    } catch (err) {
-      const error = `\
-      Cannot parse message content. Perhaps the JSON is malformed?
-
-      Message content:
-      ${content}
-
-      Stack:
-      ${err.stack}`;
-      return {
-        error,
-        endpoint: '', origin: '', callback: null, data: {}, noreply: false,
-      }
-    }
-  }
-
 }

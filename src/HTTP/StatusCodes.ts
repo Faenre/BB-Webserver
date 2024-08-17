@@ -1,4 +1,3 @@
-
 export enum Status {
 	// Informational:
 	PROCESSING = 102, 					// the message was received and is being processed, but this may take time
@@ -26,7 +25,7 @@ export interface StatusCode {
 	code: number;
 };
 
-export const StatusCodes: Record<Status, StatusCode> = {
+export const StatusCodes: Record<Status, StatusCode> = Object.freeze({
   // Informational:
   [Status.PROCESSING]:          {code: Status.PROCESSING, status: 'Processing'},
 
@@ -46,4 +45,4 @@ export const StatusCodes: Record<Status, StatusCode> = {
   [Status.SERVER_ERROR]:        {code: Status.SERVER_ERROR, status: 'Server Error'},
   [Status.NOT_IMPLEMENTED]:     {code: Status.NOT_IMPLEMENTED, status: 'Not Implemented'},
   [Status.SERVICE_UNAVAILABLE]: {code: Status.SERVICE_UNAVAILABLE, status: 'Service Unavailable'},
-};
+});
